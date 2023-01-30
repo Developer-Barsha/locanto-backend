@@ -24,7 +24,7 @@ async function run() {
     const adsCollection = client.db('Locanto').collection('ads');
 
     try {
-
+        ///////// categories apis /////////
         // get all categories
         app.get('/main-categories', async (req, res) => {
             const query = {};
@@ -146,10 +146,12 @@ async function run() {
         })
 
 
-        // register user
+        ///////// users apis /////////
+        // register a user
         app.post('/register', async (req, res) => {
             const name = req.body.name;
             const email = req.body.email;
+            const userType = req.body.userType;
             const userCheck = await usersCollection.findOne({ email });
             if (userCheck) {
                 res.send({ message: 'user already exists' })
@@ -157,8 +159,10 @@ async function run() {
             else {
                 const password = bcrypt.hashSync(req.body.password, 10);
                 const token = jwt.sign({ email: email }, process.env.SECRET_ACCESS_TOKEN, { expiresIn: '1d' });
-                const result = await usersCollection.insertOne({ name, email, password });
-                res.send({ result, token });
+                const result = await usersCollection.insertOne({ name, email, password, userType, picture: '' });
+                const user = await usersCollection.findOne({ email });
+                const id = user?._id;
+                res.send({ result, token, id });
             }
         })
 
@@ -169,30 +173,52 @@ async function run() {
             res.send(users);
         })
 
+        // get a user
+        app.get('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            if (ObjectId.isValid(id)) {
+                const query = { _id: id };
+                const findUser = await usersCollection.findOne(query);
+                const name = findUser?.name;
+                const userType = findUser?.userType;
+                const email = findUser?.email;
+                const picture = findUser?.picture;
+                const user = { email, name, picture, userType };
+                res.send(user);
+            }
+            else {
+                console.log('id invalid')
+            }
+        })
+
         // update user
         app.put('/users/:email', async (req, res) => {
             const email = req.params.email;
             const updatedUser = req.body;
+            console.log(updatedUser);
             const updateDoc = {
                 $set: updatedUser
             };
-            const result = await usersCollection.updateOne({email}, updateDoc);
+            const result = await usersCollection.updateOne({ email }, updateDoc);
             res.send(result);
         })
 
         // post api for login
         app.post('/login', async (req, res) => {
             const email = req?.body?.email;
-            const password = bcrypt.hashSync(req?.body?.password, 10);
+            // const password = bcrypt.hashSync(req?.body?.password, 10);
+            const password = req?.body?.password;
             const user = await usersCollection.findOne({ email });
             if (user) {
-                if (password === user?.password) {
-                    const token = jwt.sign({ email: email }, process.env.SECRET_ACCESS_TOKEN, { expiresIn: '1d' });
-                    res.send({ token, message: 'User found' });
-                }
-                else {
-                    res.send({ message: 'password does not match' })
-                }
+                bcrypt.compare(password, user.password, function (err, result) {
+                    if (result) {
+                        const token = jwt.sign({ email: email }, process.env.SECRET_ACCESS_TOKEN, { expiresIn: '1d' });
+                        res.send({ token, id:user?._id, message: 'User found' });
+                    }
+                    else {
+                        res.send({ message: 'password does not match' })
+                    }
+                })
             }
             else {
                 res.send({ message: 'No user found' })
@@ -212,7 +238,7 @@ async function run() {
             else {
                 const token = jwt.sign({ email: email }, process.env.SECRET_ACCESS_TOKEN, { expiresIn: '1d' });
                 const result = await usersCollection.insertOne(signedUser);
-                res.send({ result, token, message: 'user created' });
+                res.send({ result, token, id:user?._id, message: 'user created' });
             }
         })
 
@@ -220,6 +246,18 @@ async function run() {
         app.post('/add-user', async (req, res) => {
             const newUser = req.body;
             const result = await usersCollection.insertOne(newUser);
+            res.send(result);
+        })
+
+        app.get('/vip-users', async (req, res) => {
+            const query = { userType: 'VIP' }
+            const result = await usersCollection.find(query).toArray();
+            res.send(result);
+        })
+
+        app.get('/premium-users', async (req, res) => {
+            const query = { userType: 'Premium' }
+            const result = await usersCollection.find(query).toArray();
             res.send(result);
         })
 
@@ -232,10 +270,37 @@ async function run() {
         })
 
 
+        ///////// ads apis /////////
         // get all ad
         app.get('/ads', async (req, res) => {
             const result = await adsCollection.find({}).toArray();
             res.send(result);
+        })
+
+        app.get('/gallery-ads', async (req, res) => {
+            const query = { adType: 'Gallery' };
+            const result = await adsCollection.find(query).toArray();
+            res.send(result);
+        })
+
+        app.get('/get-user-ads/:email', async (req, res) => {
+            const email = req.params.email;
+            // const query = { admin: { email} };
+            const result = await adsCollection.find({ "admin.email": email }).toArray();
+            res.send(result);
+        })
+
+        app.put('/ads/:id', async (req, res) => {
+            const id = req.params.id;
+            const adType = req.body;
+            if (ObjectId.isValid(id)) {
+                const updateDoc = {
+                    $set: adType
+                };
+                const result = await adsCollection.updateOne({ _id: ObjectId(id) }, updateDoc);
+                res.send(result);
+                console.log(id, adType);
+            }
         })
 
         // post an ad
