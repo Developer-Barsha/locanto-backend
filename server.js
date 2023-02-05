@@ -185,7 +185,7 @@ async function run() {
                 const picture = findUser?.picture;
                 const user = { email, name, picture, userType };
                 res.send(user);
-                console.log(id, user)
+                // console.log(id, user)
             }
             else {
                 console.log('id invalid')
@@ -196,7 +196,7 @@ async function run() {
         app.put('/users/:email', async (req, res) => {
             const email = req.params.email;
             const updatedUser = req.body;
-            console.log(updatedUser);
+            // console.log(updatedUser);
             const updateDoc = {
                 $set: updatedUser
             };
@@ -301,6 +301,8 @@ async function run() {
                 const result = await adsCollection.updateOne({ _id: ObjectId(id) }, updateDoc);
                 res.send(result);
                 console.log(id, adType);
+            }else{
+                console.log('ad id not valid')
             }
         })
 
