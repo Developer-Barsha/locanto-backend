@@ -177,7 +177,7 @@ async function run() {
         app.get('/users/:id', async (req, res) => {
             const id = req.params.id;
             if (ObjectId.isValid(id)) {
-                const query = { _id: id };
+                const query = { _id: ObjectId(id) };
                 const findUser = await usersCollection.findOne(query);
                 const name = findUser?.name;
                 const userType = findUser?.userType;
@@ -185,6 +185,7 @@ async function run() {
                 const picture = findUser?.picture;
                 const user = { email, name, picture, userType };
                 res.send(user);
+                console.log(id, user)
             }
             else {
                 console.log('id invalid')
