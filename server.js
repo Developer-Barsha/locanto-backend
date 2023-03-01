@@ -278,6 +278,18 @@ async function run() {
             res.send(result);
         })
 
+        app.get('/ads/:id', async (req, res) => {
+            const id = req.params.id;
+            if (ObjectId.isValid(id)) {
+                const query = { _id: ObjectId(id) };
+                const result = await adsCollection.findOne(query);
+                res.send(result);
+            }
+            else {
+                console.log('id invalid')
+            }
+        })
+
         app.get('/gallery-ads', async (req, res) => {
             const query = { adType: 'Gallery' };
             const result = await adsCollection.find(query).toArray();
